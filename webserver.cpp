@@ -34,13 +34,11 @@ public:
         std::istringstream iss(request_str);
         std::string line;
 
-        // 解析请求行
         if (std::getline(iss, line)) {
             std::istringstream line_stream(line);
             line_stream >> method >> path >> version;
         }
 
-        // 解析头部
         while (std::getline(iss, line) && !line.empty() && line != "\r") {
             if (line.back() == '\r') {
                 line.pop_back();
@@ -49,7 +47,6 @@ public:
             if (pos != std::string::npos) {
                 std::string key = line.substr(0, pos);
                 std::string value = line.substr(pos + 1);
-                // 去除值前面的空格
                 while (!value.empty() && (value[0] == ' ' || value[0] == '\t')) {
                     value.erase(0, 1);
                 }
@@ -57,7 +54,6 @@ public:
             }
         }
 
-        // 读取请求体
         if (headers.find("Content-Length") != headers.end()) {
             int content_length = std::stoi(headers["Content-Length"]);
             std::vector<char> body_buffer(content_length);
@@ -116,7 +112,6 @@ private:
             throw std::runtime_error("Could not create socket");
         }
 
-        // 允许地址重用
         int opt = 1;
         if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt)) == SOCKET_ERROR) {
             throw std::runtime_error("setsockopt failed");
@@ -160,7 +155,6 @@ public:
                 buffer << file.rdbuf();
                 file.close();
                 
-                // 简单的MIME类型检测
                 std::string content_type = "text/plain";
                 auto hasExtension = [](const std::string &str, const std::string &ext) -> bool {
                     if (str.length() < ext.length()) return false;
@@ -211,7 +205,6 @@ public:
                 inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
                 std::cout << "Client connected: " << client_ip << std::endl;
 
-                // 处理请求
                 const int buffer_size = 8192;
                 char buffer[buffer_size] = {0};
                 int bytes_received = recv(client_socket, buffer, buffer_size - 1, 0);
@@ -223,17 +216,14 @@ public:
 
                     HTTPResponse response;
                     
-                    // 路由处理
                     if (routes.find(request.path) != routes.end()) {
                         routes[request.path](request, response);
                     } else {
-                        // 404 Not Found
                         response.status_code = 404;
                         response.status_message = "Not Found";
                         response.setContent("<html><body><h1>404 Not Found</h1></body></html>");
                     }
 
-                    // 发送响应
                     std::string response_str = response.toString();
                     send(client_socket, response_str.c_str(), response_str.size(), 0);
                 }
@@ -264,7 +254,6 @@ int main() {
     try {
         WebServer server(8080);
         
-        // 添加路由
         server.addRoute("/", [](const HTTPRequest& req, HTTPResponse& res) {
             res.setContent("<html><body><h1>Hello, World!</h1><p>Welcome to my C++ Web Server</p></body></html>");
         });
@@ -273,7 +262,6 @@ int main() {
             res.setContent("{\"message\": \"This is JSON data\"}", "application/json");
         });
         
-        // 添加静态文件路由
         server.addStaticFileRoute("/index.html", "public/index.html");
         
         std::cout << "Starting server on port 8080..." << std::endl;
